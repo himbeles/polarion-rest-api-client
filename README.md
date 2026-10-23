@@ -53,7 +53,7 @@ uuid = work_items[0].capella_uuid # the value of the custom field capella_uuid c
 Install the optional SSO support from this fork:
 
 ```zsh
-pip install "polarion-rest-api-client[sso] @ git+https://github.com/himbeles/polarion-rest-api-client.git"
+uv add "polarion-rest-api-client[sso] @ git+https://github.com/himbeles/polarion-rest-api-client.git"
 ```
 
 With Microsoft Edge installed, no token or cookie copying is needed:
@@ -107,7 +107,7 @@ protect them like credentials and keep them outside source control.
 | `profile_dir` | Instance-specific directory under `~/.polarion-rest-api-client/sso/` | A dedicated persistent `pathlib.Path`, separate from your everyday browser profile. |
 | `timeout` | `120.0` seconds | Timeout for browser startup and login. |
 
-For Playwright Chromium, run `python -m playwright install chromium` and set
+For Playwright Chromium, run `uv run playwright install chromium` and set
 `sso=SsoConfig(browser_channel="chromium")`. Do not share a profile directory
 between simultaneously running clients or browser processes.
 
@@ -148,7 +148,9 @@ To run the optional browser integration test against a local HTTPS simulation
 (no Polarion credentials needed), install OpenSSL and Playwright Chromium, then:
 
 ```zsh
-RUN_POLARION_SSO_BROWSER_TESTS=1 pytest tests/test_sso_browser.py
+uv sync --extra sso --group tests
+uv run --extra sso playwright install chromium
+RUN_POLARION_SSO_BROWSER_TESTS=1 uv run --extra sso --group tests pytest tests/test_sso_browser.py
 ```
 
 ### Authentication with a manually supplied browser/SSO session
@@ -285,8 +287,8 @@ To set up a development environment, clone the project and install it with uv.
 ```zsh
 git clone https://github.com/dbinfrago/polarion-rest-api-client
 cd polarion-rest-api-client
-uv sync --extra docs --extra test
-uvx pre-commit run --all-files
+uv sync --group docs --group tests
+uv run --group dev pre-commit run --all-files
 ```
 
 ## Updating the auto generated part

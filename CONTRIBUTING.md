@@ -29,7 +29,7 @@ have set it up, simply run the unit tests to verify that everything is set up
 correctly:
 
 ```zsh
-pytest
+uv run --group tests pytest
 ```
 
 We additionally recommend that you set up your editor / IDE as follows.
@@ -58,12 +58,12 @@ We additionally recommend that you set up your editor / IDE as follows.
 
 - _If you do not use VSC_: Set up your editor to use the [python-lsp-server],
   and make sure that the relevant plugins are installed. You can install
-  everything that's needed into the virtualenv with pip:
+  the language server dependencies with uv:
 
   [python-lsp-server]: https://github.com/python-lsp/python-lsp-server
 
   ```zsh
-  pip install "python-lsp-server[pylint]" python-lsp-black pyls-isort pylsp-mypy
+  uv add --dev "python-lsp-server[pylint]" python-lsp-black pyls-isort pylsp-mypy
   ```
 
   This will provide as-you-type linting as well as automatic formatting on
