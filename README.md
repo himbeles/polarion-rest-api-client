@@ -48,7 +48,110 @@ project_client = client.generate_project_client("PROJ")
 work_items = project_client.work_items.get_all(work_item_cls=CustomWorkItem)
 uuid = work_items[0].capella_uuid # the value of the custom field capella_uuid can be accessed this way
 ```
-### Authentication with an existing browser/SSO session
+### Managed single sign-on with Playwright
+
+Install the optional SSO support from this fork:
+
+```zsh
+pip install "polarion-rest-api-client[sso] @ git+https://github.com/himbeles/polarion-rest-api-client.git"
+```
+
+With Microsoft Edge installed, no token or cookie copying is needed:
+
+```python
+from polarion_rest_api_client import PolarionClient
+
+with PolarionClient(
+    "https://polarion.example.com/polarion/rest/v1",
+    auth_mode="sso",
+) as client:
+    project = client.generate_project_client("PROJ")
+    print(project.exists())
+```
+
+The first API request starts a headless Edge browser in a dedicated persistent
+profile and signs in through `/polarion/ssoLogin/Single-Sign-On`. The client
+reads Polarion's `getRestApiToken()` from the authenticated page and sends
+`X-Polarion-REST-Token` together with that browser session's cookies. It keeps
+the browser alive and checks the current credentials before subsequent requests.
+A `401` or redirect triggers one login renewal and an exact request replay;
+a `403` does not trigger renewal. Request bodies, including uploads, are buffered
+in memory to allow that replay. API redirects are not followed automatically.
+
+Headless authentication depends on your organization's SSO policy. For an
+initial interactive login or MFA, use a visible browser with the same profile:
+
+```python
+from polarion_rest_api_client import PolarionClient, SsoConfig
+
+with PolarionClient(
+    "https://polarion.example.com/polarion/rest/v1",
+    auth_mode="sso",
+    sso=SsoConfig(headless=False),
+) as client:
+    client.login()  # Optional: authenticate now, before making an API request.
+```
+
+Later runs can use the default headless mode with that saved profile. No username,
+password or MFA automation is provided. Browser profiles may persist login cookies;
+protect them like credentials and keep them outside source control.
+
+`SsoConfig` supports these settings:
+
+| Setting | Default | Purpose |
+| --- | --- | --- |
+| `login_url` | Derived from the API endpoint | Same-origin SSO entry URL; required for endpoints not ending in `/rest/v1`. |
+| `headless` | `True` | Set `False` for interactive login/MFA. |
+| `browser_channel` | `"msedge"` | Installed Edge, installed `"chrome"`, or Playwright `"chromium"`. |
+| `browser_executable` | `None` | A `pathlib.Path` to a browser executable; overrides the channel. |
+| `profile_dir` | Instance-specific directory under `~/.polarion-rest-api-client/sso/` | A dedicated persistent `pathlib.Path`, separate from your everyday browser profile. |
+| `timeout` | `120.0` seconds | Timeout for browser startup and login. |
+
+For Playwright Chromium, run `python -m playwright install chromium` and set
+`sso=SsoConfig(browser_channel="chromium")`. Do not share a profile directory
+between simultaneously running clients or browser processes.
+
+Asynchronous operations use the same managed browser flow without blocking the
+calling event loop:
+
+```python
+from polarion_rest_api_client import PolarionClient
+
+async def load_work_items():
+    async with PolarionClient(
+        "https://polarion.example.com/polarion/rest/v1",
+        auth_mode="sso",
+    ) as client:
+        await client.async_login()  # Optional; requests also log in lazily.
+        project = client.generate_project_client("PROJ")
+        return await project.work_items.async_get_all()
+```
+
+Use `with` for synchronous HTTP and `async with` for asynchronous or mixed HTTP
+usage. Alternatively, call `close()` or `await aclose()` explicitly; close async
+HTTP connections on the event loop that used them. Context entry itself is lazy.
+
+SSO requires HTTPS and refuses to send credentials to other origins. HTTPX uses
+`verify_ssl` as usual; the browser uses its own certificate trust configuration
+(`verify_ssl=False` also disables its certificate checks). A custom HTTPX
+`SSLContext` does not configure the browser's certificate store.
+`SsoAuthenticationError` reports missing Playwright, browser startup/login errors,
+timeouts, and exhausted authentication renewal without entering the general API
+retry loop. PAT authentication remains the default and requires no Playwright.
+Manual tokens/cookies and conflicting `httpx_args` authentication or redirect
+settings are rejected in managed SSO mode.
+
+The implementation follows
+[mcp-server-polarion's browser-owned SSO session](https://github.com/himbeles/mcp-server-polarion/blob/5f29f13e62d641e81b47d8535ca067d9a563b4f2/src/mcp_server_polarion/core/sso.py).
+
+To run the optional browser integration test against a local HTTPS simulation
+(no Polarion credentials needed), install OpenSSL and Playwright Chromium, then:
+
+```zsh
+RUN_POLARION_SSO_BROWSER_TESTS=1 pytest tests/test_sso_browser.py
+```
+
+### Authentication with a manually supplied browser/SSO session
 
 By default, `polarion_access_token` is a personal access token (PAT) sent as
 `Authorization: Bearer <token>`. To use the REST token from an authenticated

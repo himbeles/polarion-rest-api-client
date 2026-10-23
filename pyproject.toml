@@ -36,6 +36,9 @@ dependencies = [
   "truststore>=0.10.1",
 ]
 
+[project.optional-dependencies]
+sso = ["playwright>=1.49.0,<2"]
+
 [project.urls]
 Homepage = "https://github.com/dbinfrago/polarion-rest-api-client"
 Documentation = "https://dbinfrago.github.io/polarion-rest-api-client"
@@ -102,6 +105,11 @@ disable_error_code = "misc"
 module = ["tests.*"]
 allow_incomplete_defs = true
 allow_untyped_defs = true
+
+[[tool.mypy.overrides]]
+# Optional SSO dependency; PAT-only development environments may omit it.
+module = ["playwright.*"]
+ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 # Untyped third party libraries

@@ -10,10 +10,12 @@ from polarion_rest_api_client.client import PolarionClient
 from polarion_rest_api_client.clients.projects import ProjectClient
 from polarion_rest_api_client.data_models import *
 from polarion_rest_api_client.errors import *
+from polarion_rest_api_client.sso import SsoConfig
 
 __all__ = [
     "PolarionClient",
     "ProjectClient",
+    "SsoConfig",
     *polarion_rest_api_client.data_models.__all__,
     *polarion_rest_api_client.errors.__all__,
 ]

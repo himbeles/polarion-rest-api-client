@@ -12,6 +12,7 @@ __all__ = [
     "PolarionApiInternalException",
     "PolarionApiUnexpectedException",
     "PolarionWorkItemException",
+    "SsoAuthenticationError",
 ]
 
 
@@ -21,6 +22,10 @@ class PolarionApiBaseException(Exception):
 
 class PolarionApiInternalException(Exception):
     """Exception being raised, if an error occurs in the client itself."""
+
+
+class SsoAuthenticationError(PolarionApiInternalException):
+    """SSO failed; do not retry through the general API retry loop."""
 
 
 class PolarionWorkItemException(PolarionApiInternalException):
