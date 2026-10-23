@@ -116,7 +116,15 @@ class DefaultFields:
 
 
 class PolarionClient:
-    """The overall, project independent Polarion client."""
+    """The overall, project independent Polarion client.
+
+    Authentication defaults to a personal access token sent as
+    ``Authorization: Bearer <token>``. For an existing browser/SSO session,
+    set ``auth_mode="rest_token"`` and supply its REST token as
+    ``polarion_access_token`` and session cookies as ``cookies``. This sends
+    the raw token in ``X-Polarion-REST-Token`` without a Bearer prefix.
+    The caller is responsible for obtaining and refreshing the session.
+    """
 
     def __init__(
         self,
@@ -128,12 +136,24 @@ class PolarionClient:
         max_content_size: int = 2 * 1024**2,
         verify_ssl: ssl.SSLContext | bool | None = None,
         max_async_in_flight_requests: int = 4,
+        *,
+        auth_mode: t.Literal["bearer", "rest_token"] = "bearer",
+        cookies: dict[str, str] | None = None,
     ):
+        if auth_mode not in ("bearer", "rest_token"):
+            raise ValueError("auth_mode must be 'bearer' or 'rest_token'")
         if verify_ssl is None:
             verify_ssl = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
         self.client = oa_client.AuthenticatedClient(
             polarion_api_endpoint,
             polarion_access_token,
+            auth_header_name=(
+                "X-Polarion-REST-Token"
+                if auth_mode == "rest_token"
+                else "Authorization"
+            ),
+            prefix="" if auth_mode == "rest_token" else "Bearer",
+            cookies=dict(cookies) if cookies is not None else {},
             verify_ssl=verify_ssl,
             httpx_args=httpx_args or {},
         )
